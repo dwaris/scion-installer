@@ -64,6 +64,7 @@ while [ $# -gt 0 ]; do
 	--expect-device) [ $# -ge 2 ] || { echo "scion-install.sh: --expect-device needs a name" >&2; exit 2; }; EXPECT=$2; shift 2 ;;
 	--zip-sha256) [ $# -ge 2 ] || { echo "scion-install.sh: --zip-sha256 needs a hex string" >&2; exit 2; }; ZIPSHA=$2; shift 2 ;;
 	--backup-dir) [ $# -ge 2 ] || { echo "scion-install.sh: --backup-dir needs a directory" >&2; exit 2; }; BACKUP_DIR=$2; shift 2 ;;
+	--skip-system-sha) SKIP_SYSTEM_SHA=1; shift ;;
 	--print-manifest) [ $# -ge 2 ] || { echo "scion-install.sh: --print-manifest needs a phone" >&2; exit 2; }; PRINT=$2; shift 2 ;;
 	-h|--help) usage; exit 0 ;;
 	*) echo "scion-install.sh: unknown argument: $1" >&2; usage >&2; exit 2 ;;
@@ -294,13 +295,17 @@ if [ "$MODE" = full ]; then
 	[ "$got" = "$SYSTEM_SHA256" ] || die "the system image in the zip reads $got, the zip says $SYSTEM_SHA256" "the zip is damaged: adb push it again (compare its SHA-256 with the .sha256 file), or build it again"
 	say "  right ($SYSTEM_SHA256)"
 else
-	say "SYSTEM on the phone, by SHA-256 (a minute or two; it is only read):"
-	got=$(head -c "$SYSTEM_SIZE" "$DEV_SYSTEM" | sha256)
-	if [ "$got" != "$SYSTEM_SHA256" ]; then
-		note "  SYSTEM reads $got, this zip's image is $SYSTEM_SHA256"
-		die "SYSTEM on this phone is not the iOS system image this kernel was built with" "install the full zip first (--mode full, or update-binary in TWRP), or use a kernel-update zip made together with the system image that is on the phone"
+	if [ "${SKIP_SYSTEM_SHA:-0}" = 1 ]; then
+		say "SYSTEM on the phone: check skipped (--skip-system-sha)"
+	else
+		say "SYSTEM on the phone, by SHA-256 (a minute or two; it is only read):"
+		got=$(head -c "$SYSTEM_SIZE" "$DEV_SYSTEM" | sha256)
+		if [ "$got" != "$SYSTEM_SHA256" ]; then
+			note "  SYSTEM reads $got, this zip's image is $SYSTEM_SHA256"
+			die "SYSTEM on this phone is not the iOS system image this kernel was built with" "install the full zip first (--mode full, or update-binary in TWRP), or use a kernel-update zip made together with the system image that is on the phone"
+		fi
+		say "  SYSTEM is the system image this boot image was made with"
 	fi
-	say "  SYSTEM is the system image this boot image was made with"
 fi
 
 # ---- RECOVERY (TWRP) and EFS, as they are now -------------------------------------------------------------------------------
