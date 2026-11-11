@@ -153,7 +153,12 @@ for dev in starlte star2lte crownlte; do
 	fi
 	# (the S9's defaults already keep /private/var in USERDATA: said again, it changes nothing there)
 	[ "$FORMAT" = 1 ] && args="$args ufs_write=1 var_hfs=ufs_USERDATA_data"
-	args=$(echo $args system_apfs=ufs_$PART$(get EXTRA $dev) $*)
+	extra=$(echo "system_apfs=ufs_$PART$(get EXTRA $dev) $*")
+	if [ "$dev" != starlte ]; then
+		args=$(python3 "$KREPO/tools/hakios-config.py" args --defconfig "${dev}_defconfig" --with "$args $extra" 2>/dev/null || echo "$args $extra")
+	else
+		args=$(echo $args $extra)
+	fi
 	echo "mkinstaller.sh: $dev: boot-args $args$([ "$dev" != starlte ] || echo ' (over the S9 defaults)')"
 	made=$("$KREPO/devices/$dev/mkimage.sh" $borrow $QUIET -o "$WORK/boot_$dev.img" -k "$k" -r "$ROOT" -s "$secs" $args)
 	echo "$made" | sed 's/^/  /'

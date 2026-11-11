@@ -297,7 +297,13 @@ else
 fi
 git -C "$KREPO" cat-file -e "$KREF^{commit}" 2>/dev/null || git -C "$KREPO" fetch -q origin "$KREF" || die "no commit $KREF in $KERNEL_REPO"
 git -C "$KREPO" -c advice.detachedHead=false checkout -q "$KREF" 2>/dev/null || git -C "$KREPO" -c advice.detachedHead=false checkout -q FETCH_HEAD
-(cd "$KREPO" && python3 tools/hakios-device.py sync $DEVLIST) | sed 's/^/  /'
+SYNCLIST=$DEVLIST
+case " $DEVLIST " in
+	*" star2lte "*|*" crownlte "*)
+		case " $SYNCLIST " in *" starlte "*) ;; *) SYNCLIST="$SYNCLIST starlte" ;; esac
+		;;
+esac
+(cd "$KREPO" && python3 tools/hakios-device.py sync $SYNCLIST) | sed 's/^/  /'
 for d in $DEVLIST; do [ -x "$KREPO/devices/$d/mkimage.sh" ] || die "devices/$d did not sync (tools/hakios-device.py sync $d)"; done
 # The kernel's tree is laid out once (make kernel: xnu/apply.sh when there is none), and XNU's patches are not re-read after
 # that: a --work used before with another commit gets a fresh one, and the Wi-Fi driver's objects made against the old.
