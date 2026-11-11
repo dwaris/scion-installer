@@ -2,6 +2,7 @@
 *.zip
 *.img
 *.apfs
+*.ipsw
 out/
 scion-build/
 __pycache__/
