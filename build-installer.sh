@@ -174,9 +174,12 @@ KREPO=$WORK/scion-kernel
 # the other two: their kernels start none of these drivers (bluetoothd finds no address and exits; launchd paces it).
 S9_ARGS=
 S9_USERLAND=()
-case " $DEVLIST " in *" starlte "*)
-	S9_ARGS="rtc_pmic= shub=6 bt=7"
-	S9_USERLAND=(BT=1 DEVICE=starlte) ;;
+case " $DEVLIST " in
+	*" starlte "*)
+		S9_ARGS="rtc_pmic= shub=6 bt=7"
+		S9_USERLAND=(BT=1 DEVICE=starlte) ;;
+	*" star2lte "*)
+		S9_USERLAND=(BT=1 DEVICE=star2lte) ;;
 esac
 # Metal on the S9+ (star2lte): the plug-in on Vulkan (userland/build.sh METAL=vk), over PanVK, Mesa's Vulkan driver for the
 # Mali-G72 (tools/mk-panvk.sh), and metal2vulkan's runtime (tools/metal/mk-metal2vulkan.sh, which build.sh runs; it installs its
@@ -458,7 +461,7 @@ for d in $DEVLIST; do
 	run "defconfig-$d.log" make "${d}_defconfig"
 	# The S9's Wi-Fi is Linux's brcmfmac, an object of its own that the kernel links when it is there and goes without,
 	# saying nothing, when it is not (xnu-build.sh). It is compiled against the kernel's tree, so that comes first.
-	if [ "$d" = starlte ]; then
+	if [ "$d" = starlte ] || [ "$d" = star2lte ]; then
 		[ -d xnu-src/xnu-8796.121.2 ] || run layout.log xnu/apply.sh
 		[ -e xnu-deps/host/bin/ld64 ] || run setup.log xnu-deps/setup.sh
 		run mk-brcmfmac.log tools/mk-brcmfmac.sh
@@ -467,8 +470,8 @@ for d in $DEVLIST; do
 	run "kernel-$d.log" make kernel JOBS="$JOBS"
 	[ -f hakios-kernel ] || die "make kernel left no hakios-kernel (the log: $LOGS/kernel-$d.log)"
 	git rev-parse HEAD > "$LAYOUT"
-	if [ "$d" = starlte ] && ! grep -aq 'lx: brcmfmac 2:' hakios-kernel; then
-		die "the S9's kernel has no Wi-Fi driver in it: brcmfmac.o was not linked (the logs: $LOGS/mk-brcmfmac.log, $LOGS/kernel-$d.log)"
+	if { [ "$d" = starlte ] || [ "$d" = star2lte ]; } && ! grep -aq 'lx: brcmfmac 2:' hakios-kernel; then
+		die "the $d kernel has no Wi-Fi driver in it: brcmfmac.o was not linked (the logs: $LOGS/mk-brcmfmac.log, $LOGS/kernel-$d.log)"
 	fi
 	cp hakios-kernel "$KDIR/kernel-$d"
 	echo "  $(grep -a 'drivers built in' "$LOGS/kernel-$d.log" | tail -1 || true)"
